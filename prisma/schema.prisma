@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vacancy {
+  id          String      @id @default(cuid())
+  title       String
+  description String      @db.Text
+  requirements String     @db.Text
+  salary      String?
+  status      VacancyStatus @default(ACTIVE)
+  questions   Json        // Array of interview questions
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  interviews  Interview[]
+
+  @@map("vacancies")
+}
+
+model Candidate {
+  id          String      @id @default(cuid())
+  telegramId  String      @unique
+  firstName   String?
+  lastName    String?
+  phoneNumber String?
+  username    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  interviews  Interview[]
+
+  @@map("candidates")
+}
+
+model Interview {
+  id          String      @id @default(cuid())
+  candidateId String
+  vacancyId   String
+  status      InterviewStatus @default(IN_PROGRESS)
+  matchScore  Float?     // AI-generated match score (0-100)
+  currentQuestionIndex Int @default(0)
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  candidate   Candidate   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  vacancy     Vacancy     @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+
+  @@map("interviews")
+}
+
+model Answer {
+  id          String      @id @default(cuid())
+  interviewId String
+  questionIndex Int
+  question    String      @db.Text
+  answer      String      @db.Text
+  score       Float?      // AI-generated score for this answer (0-10)
+  feedback    String?     @db.Text // AI-generated feedback
+  isVoice     Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  interview   Interview   @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}
+
+enum VacancyStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+}
+
+enum InterviewStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
